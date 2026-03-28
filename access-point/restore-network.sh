@@ -41,7 +41,9 @@ iptables -t nat -D PREROUTING -p tcp --dport 80 -j DNAT \
     --to-destination 192.168.4.1:3000 2>/dev/null || true
 netfilter-persistent save 2>/dev/null || true
 
-echo "==> Restarting dhcpcd to reconnect to home network..."
-systemctl restart dhcpcd
-
-echo "==> Done. The Pi should now rejoin the home network."
+echo "==> Rebooting to cleanly rejoin home network..."
+# A reboot is the most reliable way to release the wlan interface from AP mode
+# and let wpa_supplicant/NetworkManager reconnect to the known WiFi.
+# hostapd and dnsmasq are already disabled above, so the captive portal will
+# NOT restart — the Pi will boot straight into normal networking mode.
+reboot

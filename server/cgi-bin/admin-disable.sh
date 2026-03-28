@@ -78,8 +78,8 @@ elif [ "$REQUEST_METHOD" = "POST" ]; then
 </head>
 <body>
   <h2>Restoring normal network mode…</h2>
-  <p>The Pi will disconnect from AP mode in a moment.</p>
-  <p>Reconnect to your home WiFi, then SSH into the Pi as usual.</p>
+  <p>The Pi is rebooting. This takes about 30–60 seconds.</p>
+  <p>Once it has rebooted, reconnect to your home WiFi and SSH into the Pi as usual.</p>
 </body>
 </html>
 HTML
