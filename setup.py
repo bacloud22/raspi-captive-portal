@@ -1,4 +1,3 @@
-import json
 import os
 import re
 import subprocess
@@ -23,7 +22,6 @@ def check_super_user():
     print()
     ColorPrint.print(cyan, "▶ Check sudo")
 
-    # Is root?
     if os.geteuid() != 0:
         print("You need root privileges to run this script.")
         print('Please try again using "sudo"')
@@ -32,50 +30,12 @@ def check_super_user():
         print("Running as root user, continue.")
 
 
-def install_node():
-    NODE_JS_VERSION = 22  # EOL: October 2025 (https://nodejs.org/en/about/previous-releases)
-
-    def get_versions():
-        res = subprocess.run(["npm", "version", "--json"], capture_output=True, check=True)
-        return json.loads(res.stdout)
-
+def install_lighttpd():
     print()
-    ColorPrint.print(cyan, "▶ Node.js & npm")
+    ColorPrint.print(cyan, "▶ Install lighttpd")
 
-    # Already installed?
-    data = {}
-    try:
-        data = get_versions()
-        if data["npm"] and data["node"]:
-            installed = True
-    except Exception:  # pylint: disable=broad-except
-        installed = False
-
-    if installed:
-        print(f'You have Node.js v{data["node"]} and npm v{data["npm"]} installed.')
-
-        majorVersion = data["node"].split(".")[0]
-        if int(majorVersion) < NODE_JS_VERSION:
-            answer = query_yes_no(
-                f"Would you still like to try installing Node.js v{NODE_JS_VERSION}.x (LTS)?",
-                default="yes",
-            )
-            installed = not answer
-
-    # Install
-    if not installed:
-        # https://nodejs.org/en/download
-        subprocess.run(
-            "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash",
-            shell=True,
-            check=True,
-        )
-        subprocess.run(
-            f". $HOME/.nvm/nvm.sh && nvm install {NODE_JS_VERSION}",
-            shell=True,
-            check=True,
-            executable="/bin/bash",
-        )
+    subprocess.run(["apt-get", "update"], check=True)
+    subprocess.run(["apt-get", "install", "-y", "lighttpd"], check=True)
 
 
 def setup_access_point():
@@ -95,39 +55,37 @@ def setup_access_point():
     subprocess.run("./access-point/setup-access-point.sh", shell=True, check=True)
 
 
-def install_server_dependencies():
-    print()
-    ColorPrint.print(cyan, "▶ Install Node.js dependencies for backend")
-
-    subprocess.call("npm install", shell=True, cwd="./server")
-
-
-def build_server():
-    print()
-    ColorPrint.print(cyan, "▶ Build Node.js server (typescript)")
-
-    print("This might take some time...")
-    subprocess.call("npm run build", shell=True, cwd="./server")
-
-
 def setup_server_service():
     print()
-    ColorPrint.print(cyan, "▶ Configure Node.js server to start at boot")
+    ColorPrint.print(cyan, "▶ Configure lighttpd and captive portal service")
 
-    # Replace path in file
-    server_path = os.path.join(os.getcwd(), "server")
-    server_config_path = "./access-point/access-point-server.service"
-    with open(server_config_path, "r", encoding="utf-8") as f:
-        filedata = f.read()
-    filedata = re.sub(r"WorkingDirectory=.*", f"WorkingDirectory={server_path}", filedata)
-    with open(server_config_path, "w", encoding="utf-8") as f:
-        f.write(filedata)
+    # Resolve absolute path once so all config files use consistent paths
+    project_dir = os.getcwd()
+    lighttpd_config_src = "./lighttpd/lighttpd.conf"
 
-    print("We will now register the Node.js app as a Linux service and configure")
-    print("it to start at boot time.")
-    print("The following commands will execute as sudo user.")
-    print('Please make sure you look through the file "./access-point/setup-server.sh"')
-    print("first before approving.")
+    # Substitute PROJECT_DIR placeholder with the real path
+    with open(lighttpd_config_src, "r", encoding="utf-8") as f:
+        config = f.read()
+    config = config.replace("PROJECT_DIR", project_dir)
+
+    # Write resolved config to a temp file, then copy into place as root
+    tmp_conf = "/tmp/portal-lighttpd.conf"
+    with open(tmp_conf, "w", encoding="utf-8") as f:
+        f.write(config)
+    subprocess.run(["sudo", "cp", tmp_conf, "/etc/lighttpd/lighttpd.conf"], check=True)
+
+    # Make CGI scripts executable
+    subprocess.run(
+        ["sudo", "chmod", "+x",
+         os.path.join(project_dir, "server/cgi-bin/ping.sh"),
+         os.path.join(project_dir, "server/cgi-bin/admin-disable.sh")],
+        check=True,
+    )
+
+    print("lighttpd config installed. We will now run setup-server.sh to")
+    print("deploy the restore script, configure sudoers, generate the admin")
+    print("token, and start the service.")
+    print('Please look through "./access-point/setup-server.sh" first.')
     answer = query_yes_no("Continue?", default="yes")
 
     if not answer:
@@ -160,11 +118,8 @@ def execute_all():
     print_header()
     check_super_user()
 
-    install_node()
+    install_lighttpd()
     setup_access_point()
-
-    install_server_dependencies()
-    build_server()
     setup_server_service()
 
     done()
