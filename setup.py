@@ -34,6 +34,7 @@ def install_lighttpd():
     print()
     ColorPrint.print(cyan, "▶ Install lighttpd")
 
+    subprocess.run(["rm", "-rf", "/var/lib/apt/lists/"], check=True)
     subprocess.run(["apt-get", "update"], check=True)
     subprocess.run(["apt-get", "install", "-y", "lighttpd"], check=True)
 
