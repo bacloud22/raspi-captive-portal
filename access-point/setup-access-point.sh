@@ -5,6 +5,7 @@
 # https://github.com/TomHumphries/RaspberryPiHotspot
 
 # --- Install
+sudo rm -rf /var/lib/apt/lists/*
 sudo apt-get update
 # dhcpcd is a DHCP client. It should come pre-installed by default, but that
 # was not the case for me when installing the new Bookworm Raspi OS. That's
