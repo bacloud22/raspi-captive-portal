@@ -39,6 +39,25 @@ def install_lighttpd():
     subprocess.run(["apt-get", "install", "-y", "lighttpd"], check=True)
 
 
+def unmanage_wlan0_from_networkmanager():
+    nm_conf_dir = "/etc/NetworkManager/conf.d"
+    nm_conf_path = f"{nm_conf_dir}/99-unmanaged-wlan0.conf"
+    conf_content = "[keyfile]\nunmanaged-devices=interface-name:wlan0\n"
+
+    if not os.path.isdir(nm_conf_dir):
+        # NetworkManager is not installed, nothing to do
+        return
+
+    print()
+    ColorPrint.print(cyan, "▶ Tell NetworkManager to leave wlan0 alone")
+
+    with open("/tmp/99-unmanaged-wlan0.conf", "w") as f:
+        f.write(conf_content)
+    subprocess.run(["cp", "/tmp/99-unmanaged-wlan0.conf", nm_conf_path], check=True)
+    subprocess.run(["systemctl", "restart", "NetworkManager"], check=True)
+    print("NetworkManager will no longer manage wlan0.")
+
+
 def setup_access_point():
     print()
     ColorPrint.print(cyan, "▶ Setup Access Point (WiFi)")
@@ -131,6 +150,7 @@ def execute_all():
     check_super_user()
 
     install_lighttpd()
+    unmanage_wlan0_from_networkmanager()
     setup_access_point()
     setup_server_service()
 
