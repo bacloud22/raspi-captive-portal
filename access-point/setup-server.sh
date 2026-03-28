@@ -1,14 +1,8 @@
 #!/bin/sh
 #
 # Registers the captive portal as a system service.
-# Called by setup.py after it has resolved the project path.
-#
-# Set ADMIN_SECRET below to a long, hard-to-guess string before running.
-# The admin URL will be:  http://splines.portal/admin/disable?token=<ADMIN_SECRET>
-
-# --- Set your static admin secret here -------------------------------------
-ADMIN_SECRET="happy-birthday"
-# ---------------------------------------------------------------------------
+# Called by setup.py (which prompts for ADMIN_SECRET and passes it via env).
+# To run directly: ADMIN_SECRET="your-secret" ./setup-server.sh
 
 set -e
 
@@ -26,9 +20,9 @@ echo "www-data ALL=(ALL) NOPASSWD: /usr/local/bin/portal-restore-network.sh" \
 sudo chmod 440 /etc/sudoers.d/portal-restore
 
 # --- Admin token ------------------------------------------------------------
-if [ "$ADMIN_SECRET" = "happy-birthday" ]; then
-    echo "❌  Error: ADMIN_SECRET is still set to the default placeholder."
-    echo "   Edit setup-server.sh and set ADMIN_SECRET to a secret string before running."
+if [ -z "$ADMIN_SECRET" ]; then
+    echo "❌  Error: ADMIN_SECRET is not set."
+    echo "   Run via setup.py, or: ADMIN_SECRET=\"your-secret\" ./setup-server.sh"
     exit 1
 fi
 echo "$ADMIN_SECRET" | sudo tee /etc/portal-admin-token > /dev/null

@@ -83,16 +83,27 @@ def setup_server_service():
     )
 
     print("lighttpd config installed. We will now run setup-server.sh to")
-    print("deploy the restore script, configure sudoers, generate the admin")
-    print("token, and start the service.")
+    print("deploy the restore script, configure sudoers, and start the service.")
     print('Please look through "./access-point/setup-server.sh" first.')
     answer = query_yes_no("Continue?", default="yes")
 
     if not answer:
         return sys.exit(0)
 
+    print()
+    print("Enter the admin secret for the disable URL.")
+    print("Choose any long, hard-to-guess string — this is your password.")
+    admin_secret = ""
+    while not admin_secret.strip():
+        admin_secret = input("Admin secret: ").strip()
+        if not admin_secret:
+            print("Secret cannot be empty, please try again.")
+
+    env = os.environ.copy()
+    env["ADMIN_SECRET"] = admin_secret
+
     subprocess.run("sudo chmod a+x ./setup-server.sh", shell=True, cwd="./access-point", check=True)
-    subprocess.run("./setup-server.sh", shell=True, cwd="./access-point", check=True)
+    subprocess.run("./setup-server.sh", shell=True, cwd="./access-point", check=True, env=env)
 
 
 def done():
