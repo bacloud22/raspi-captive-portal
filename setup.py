@@ -54,7 +54,7 @@ def unmanage_wlan0_from_networkmanager():
     with open("/tmp/99-unmanaged-wlan0.conf", "w") as f:
         f.write(conf_content)
     subprocess.run(["cp", "/tmp/99-unmanaged-wlan0.conf", nm_conf_path], check=True)
-    subprocess.run(["systemctl", "restart", "NetworkManager"], check=True)
+    subprocess.run(["nmcli", "general", "reload"], check=True)
     print("NetworkManager will no longer manage wlan0.")
 
 
